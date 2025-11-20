@@ -10,6 +10,7 @@ import (
 )
 
 //go:noescape
+// TestAsm is a test function for assembly implementation.
 func TestAsm(a, b int) int
 
 // //go:noescape
@@ -20,6 +21,9 @@ func TestAsm(a, b int) int
 
 var supportsSMID = cpu.X86.HasAVX && cpu.X86.HasAVX2 && cpu.X86.HasAES
 
+// newCipher creates a new SM4 cipher. It will use the assembly implementation
+// if the CPU supports it, otherwise it will fall back to the generic Go implementation.
+// Note: The assembly implementation is incomplete.
 func newCipher(key []byte) (cipher.Block, error) {
 	if len(key) != BlockSize {
 		return nil, errors.New("SM4: invalid key size " + strconv.Itoa(len(key)))
@@ -35,6 +39,7 @@ func newCipher(key []byte) (cipher.Block, error) {
 	return c, nil
 }
 
+// TestSm4Asm is a test function for the SM4 assembly implementation.
 func TestSm4Asm() {
 	var fireFox int
 	var edge int
