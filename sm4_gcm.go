@@ -22,15 +22,13 @@ import (
 	"strconv"
 )
 
-// Sm4GCM SM4 GCM 加解密模式
-// Paper: The Galois/Counter Mode of Operation (GCM) David A. Mcgrew，John Viega .2004.
-// key: 对称加密密钥
-// IV: IV向量
-// in:
-// A: 附加的可鉴别数据(ADD)
-// mode: true - 加密; false - 解密验证
-//
-// return: 密文C, 鉴别标签T, 错误
+// Sm4GCM encrypts or decrypts a message using SM4 in GCM mode.
+// key is the symmetric key.
+// IV is the initialization vector.
+// in is the input data.
+// A is the additional authenticated data.
+// mode is true for encryption, false for decryption.
+// It returns the ciphertext, the authentication tag, and an error if any.
 func Sm4GCM(key []byte, IV, in, A []byte, mode bool) ([]byte, []byte, error) {
 	if len(key) != BlockSize {
 		return nil, nil, errors.New("SM4: invalid key size " + strconv.Itoa(len(key)))
@@ -44,9 +42,9 @@ func Sm4GCM(key []byte, IV, in, A []byte, mode bool) ([]byte, []byte, error) {
 	}
 }
 
-// GetH 对“0”分组的加密得到 GHASH泛杂凑函数的子密钥
-// key: 对称密钥
-// return: GHASH泛杂凑函数的子密钥
+// GetH generates the GHASH subkey by encrypting a block of zeros.
+// key is the symmetric key.
+// It returns the GHASH subkey.
 func GetH(key []byte) (H []byte) {
 	c, err := newCipherGeneric(key)
 	if err != nil {
@@ -115,6 +113,11 @@ func multiplication(X, Y []byte) (Z []byte) {
 	return Z
 }
 
+// GHASH calculates the GHASH value for the given data.
+// H is the GHASH subkey.
+// A is the additional authenticated data.
+// C is the ciphertext.
+// It returns the GHASH value.
 func GHASH(H []byte, A []byte, C []byte) (X []byte) {
 
 	calculm_v := func(m, v int) (int, int) {
@@ -190,11 +193,10 @@ func GHASH(H []byte, A []byte, C []byte) (X []byte) {
 	return X[(m+n+1)*BlockSize : (m+n+1)*BlockSize+BlockSize]
 }
 
-// GetY0 生成初始的计数器时钟J0
-//
-// H: GHASH自密钥
-// IV: IV向量
-// return: 初始的计数器时钟(J0)
+// GetY0 generates the initial counter block J0.
+// H is the GHASH subkey.
+// IV is the initialization vector.
+// It returns the initial counter block J0.
 func GetY0(H, IV []byte) []byte {
 	if len(IV)*8 == 96 {
 		zero31one1 := []byte{0x00, 0x00, 0x00, 0x01}
@@ -241,17 +243,17 @@ func incr(n int, Y_i []byte) (Y_ii []byte) {
 	return Y_ii
 }
 
+// MSB returns the most significant bits of a byte slice.
 func MSB(len int, S []byte) (out []byte) {
 	return S[:len/8]
 }
 
-// GCMEncrypt 可鉴别加密函数 (GCM-AE(k))
-// K: 对称密钥
-// IV: IV向量
-// P: 明文
-// A: 附加的鉴别数据
-//
-// return: 密文, 鉴别标签
+// GCMEncrypt performs authenticated encryption using GCM mode.
+// K is the symmetric key.
+// IV is the initialization vector.
+// P is the plaintext.
+// A is the additional authenticated data.
+// It returns the ciphertext and the authentication tag.
 func GCMEncrypt(K, IV, P, A []byte) (C, T []byte) {
 	calculm_v := func(m, v int) (int, int) {
 		if m == 0 && v != 0 {
@@ -272,7 +274,7 @@ func GCMEncrypt(K, IV, P, A []byte) (C, T []byte) {
 	u := len(P) % BlockSize
 	n, u = calculm_v(n, u)
 
-	// a) 通过对“0”分组的加密得到 GHASH泛杂凑函数的子密钥
+	// Generate the GHASH subkey by encrypting a block of zeros
 	H := GetH(K)
 
 	Y0 := GetY0(H, IV)
@@ -286,14 +288,14 @@ func GCMEncrypt(K, IV, P, A []byte) (C, T []byte) {
 	Enc := make([]byte, BlockSize)
 	C = make([]byte, len(P))
 
-	//i=1...n-1
+	// Process blocks
 	for i := 1; i <= n-1; i++ {
 		c.Encrypt(Enc, Y[i*BlockSize:i*BlockSize+BlockSize])
 
 		copy(C[(i-1)*BlockSize:(i-1)*BlockSize+BlockSize], addition(P[(i-1)*BlockSize:(i-1)*BlockSize+BlockSize], Enc))
 	}
 
-	//i=n
+	// Process the last block
 	c.Encrypt(Enc, Y[n*BlockSize:n*BlockSize+BlockSize])
 	out := MSB(u, Enc)
 	copy(C[(n-1)*BlockSize:], addition(P[(n-1)*BlockSize:], out))
@@ -305,6 +307,12 @@ func GCMEncrypt(K, IV, P, A []byte) (C, T []byte) {
 	return C, T
 }
 
+// GCMDecrypt performs authenticated decryption using GCM mode.
+// K is the symmetric key.
+// IV is the initialization vector.
+// C is the ciphertext.
+// A is the additional authenticated data.
+// It returns the plaintext and the authentication tag.
 func GCMDecrypt(K, IV, C, A []byte) (P, _T []byte) {
 	calculm_v := func(m, v int) (int, int) {
 		if m == 0 && v != 0 {

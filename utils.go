@@ -8,7 +8,8 @@ import (
 	"io/ioutil"
 )
 
-// ReadKeyFromPem will return SM4Key from PEM format data.
+// ReadKeyFromPem reads an SM4 key from PEM-encoded data.
+// If the PEM block is encrypted, it will be decrypted using the provided password.
 func ReadKeyFromPem(data []byte, pwd []byte) (SM4Key, error) {
 	block, _ := pem.Decode(data)
 	if block == nil {
@@ -33,7 +34,8 @@ func ReadKeyFromPem(data []byte, pwd []byte) (SM4Key, error) {
 	return block.Bytes, nil
 }
 
-// ReadKeyFromPemFile will return SM4Key from filename that saved PEM format data.
+// ReadKeyFromPemFile reads an SM4 key from a PEM-encoded file.
+// If the PEM block is encrypted, it will be decrypted using the provided password.
 func ReadKeyFromPemFile(FileName string, pwd []byte) (SM4Key, error) {
 	data, err := ioutil.ReadFile(FileName)
 	if err != nil {
@@ -42,11 +44,12 @@ func ReadKeyFromPemFile(FileName string, pwd []byte) (SM4Key, error) {
 	return ReadKeyFromPem(data, pwd)
 }
 
-// WriteKeyToPem will convert SM4Key to PEM format data and return it.
+// WriteKeyToPem encodes an SM4 key into PEM format.
+// If a password is provided, the PEM block will be encrypted.
 func WriteKeyToPem(key SM4Key, pwd []byte) ([]byte, error) {
 	if pwd != nil {
 		block, err := x509.EncryptPEMBlock(rand.Reader,
-			"SM4 ENCRYPTED KEY", key, pwd, x509.PEMCipherAES256) //Use AES256  algorithms to encrypt SM4KEY
+			"SM4 ENCRYPTED KEY", key, pwd, x509.PEMCipherAES256) // Use AES256 to encrypt the SM4 key
 		if err != nil {
 			return nil, err
 		}
@@ -60,8 +63,8 @@ func WriteKeyToPem(key SM4Key, pwd []byte) ([]byte, error) {
 	}
 }
 
-// WriteKeyToPemFile will convert SM4Key to PEM format data, then write it
-// into the input filename.
+// WriteKeyToPemFile encodes an SM4 key into PEM format and writes it to a file.
+// If a password is provided, the PEM block will be encrypted.
 func WriteKeyToPemFile(FileName string, key SM4Key, pwd []byte) error {
 	var block *pem.Block
 	var err error

@@ -27,25 +27,28 @@ import (
 	"github.com/tjfoc/gmsm/sm4"
 )
 
+// BlockSize is the SM4 block size in bytes.
 const BlockSize = 16
 
+// IV is the initialization vector used for encryption.
 var IV = make([]byte, BlockSize)
 
+// SM4Key defines the SM4 key.
 type SM4Key []byte
 
-// Cipher is an instance of SM4 encryption.
+// Sm4Cipher is an instance of SM4 encryption.
 type Sm4Cipher struct {
 	subkeys []uint32
 	block1  []uint32
 	block2  []byte
 }
 
-// sm4密钥参量
+// fk is a fixed parameter for key expansion.
 var fk = [4]uint32{
 	0xa3b1bac6, 0x56aa3350, 0x677d9197, 0xb27022dc,
 }
 
-// sm4密钥参量
+// ck is a fixed parameter for key expansion.
 var ck = [32]uint32{
 	0x00070e15, 0x1c232a31, 0x383f464d, 0x545b6269,
 	0x70777e85, 0x8c939aa1, 0xa8afb6bd, 0xc4cbd2d9,
@@ -57,7 +60,7 @@ var ck = [32]uint32{
 	0x10171e25, 0x2c333a41, 0x484f565d, 0x646b7279,
 }
 
-// sm4密钥参量
+// sbox is the SM4 S-box substitution table.
 var sbox = [256]uint8{
 	0xd6, 0x90, 0xe9, 0xfe, 0xcc, 0xe1, 0x3d, 0xb7, 0x16, 0xb6, 0x14, 0xc2, 0x28, 0xfb, 0x2c, 0x05,
 	0x2b, 0x67, 0x9a, 0x76, 0x2a, 0xbe, 0x04, 0xc3, 0xaa, 0x44, 0x13, 0x26, 0x49, 0x86, 0x06, 0x99,
@@ -159,7 +162,7 @@ func l0(b uint32) uint32 { return b ^ rl(b, 13) ^ rl(b, 23) }
 
 func feistel0(x0, x1, x2, x3, rk uint32) uint32 { return x0 ^ l0(p(x1^x2^x3^rk)) }
 
-// 非线性变换τ(.)
+// p is a non-linear transformation function used in the Feistel network.
 func p(a uint32) uint32 {
 	return (uint32(sbox[a>>24]) << 24) ^ (uint32(sbox[(a>>16)&0xff]) << 16) ^ (uint32(sbox[(a>>8)&0xff]) << 8) ^ uint32(sbox[(a)&0xff])
 }
@@ -180,7 +183,7 @@ func permuteFinalBlock(b []byte, block []uint32) {
 	}
 }
 
-// 修改后的加密核心函数
+// cryptBlock is the core encryption function.
 func cryptBlock(subkeys []uint32, b []uint32, r []byte, dst, src []byte, decrypt bool) {
 	permuteInitialBlock(b, src)
 
@@ -233,6 +236,7 @@ func generateSubKeys(key []byte) []uint32 {
 }
 
 // NewCipher creates and returns a new cipher.Block.
+// key is the symmetric key.
 func newCipherGeneric(key []byte) (cipher.Block, error) {
 	if len(key) != BlockSize {
 		return nil, errors.New("SM4: invalid key size " + strconv.Itoa(len(key)))
@@ -244,18 +248,24 @@ func newCipherGeneric(key []byte) (cipher.Block, error) {
 	return c, nil
 }
 
+// BlockSize returns the SM4 block size.
 func (c *Sm4Cipher) BlockSize() int {
 	return BlockSize
 }
 
+// Encrypt encrypts the first block in src into dst.
+// Dst and src must overlap entirely or not at all.
 func (c *Sm4Cipher) Encrypt(dst, src []byte) {
 	cryptBlock(c.subkeys, c.block1, c.block2, dst, src, false)
 }
 
+// Decrypt decrypts the first block in src into dst.
+// Dst and src must overlap entirely or not at all.
 func (c *Sm4Cipher) Decrypt(dst, src []byte) {
 	cryptBlock(c.subkeys, c.block1, c.block2, dst, src, true)
 }
 
+// xor performs XOR operation on two byte slices.
 func xor(in, iv []byte) (out []byte) {
 	if len(in) != len(iv) {
 		return nil
@@ -268,12 +278,14 @@ func xor(in, iv []byte) (out []byte) {
 	return
 }
 
+// pkcs7Padding applies PKCS#7 padding to the input data.
 func pkcs7Padding(src []byte) []byte {
 	padding := BlockSize - len(src)%BlockSize
 	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(src, padtext...)
 }
 
+// pkcs7UnPadding removes PKCS#7 padding from the input data.
 func pkcs7UnPadding(src []byte) ([]byte, error) {
 	length := len(src)
 	if length == 0 {
@@ -293,6 +305,9 @@ func pkcs7UnPadding(src []byte) ([]byte, error) {
 
 	return src[:(length - unpadding)], nil
 }
+
+// SetIV sets the initialization vector for encryption.
+// The IV must be the same length as the block size.
 func SetIV(iv []byte) error {
 	if len(iv) != BlockSize {
 		return errors.New("SM4: invalid iv size")
@@ -301,6 +316,10 @@ func SetIV(iv []byte) error {
 	return nil
 }
 
+// Sm4Cbc encrypts or decrypts a message using SM4 in CBC mode.
+// key is the symmetric key.
+// in is the input data.
+// mode is true for encryption, false for decryption.
 func Sm4Cbc(key []byte, in []byte, mode bool) (out []byte, err error) {
 	if len(key) != BlockSize {
 		return nil, errors.New("SM4: invalid key size " + strconv.Itoa(len(key)))
@@ -340,6 +359,11 @@ func Sm4Cbc(key []byte, in []byte, mode bool) (out []byte, err error) {
 
 	return out, nil
 }
+
+// Sm4Ecb encrypts or decrypts a message using SM4 in ECB mode.
+// key is the symmetric key.
+// in is the input data.
+// mode is true for encryption, false for decryption.
 func Sm4Ecb(key []byte, in []byte, mode bool) (out []byte, err error) {
 	if len(key) != BlockSize {
 		return nil, errors.New("SM4: invalid key size " + strconv.Itoa(len(key)))
@@ -375,9 +399,10 @@ func Sm4Ecb(key []byte, in []byte, mode bool) (out []byte, err error) {
 	return out, nil
 }
 
-// 密码反馈模式（Cipher FeedBack (CFB)）
-// https://blog.csdn.net/zy_strive_2012/article/details/102520356
-// https://blog.csdn.net/sinat_23338865/article/details/72869841
+// Sm4CFB encrypts or decrypts a message using SM4 in CFB mode.
+// key is the symmetric key.
+// in is the input data.
+// mode is true for encryption, false for decryption.
 func Sm4CFB(key []byte, in []byte, mode bool) (out []byte, err error) {
 	if len(key) != BlockSize {
 		return nil, errors.New("SM4: invalid key size " + strconv.Itoa(len(key)))
@@ -398,7 +423,7 @@ func Sm4CFB(key []byte, in []byte, mode bool) (out []byte, err error) {
 	K := make([]byte, BlockSize)
 	cipherBlock := make([]byte, BlockSize)
 	plainBlock := make([]byte, BlockSize)
-	if mode { //加密
+	if mode { // encryption
 		for i := 0; i < len(inData)/16; i++ {
 			if i == 0 {
 				c.Encrypt(K, IV)
@@ -413,17 +438,17 @@ func Sm4CFB(key []byte, in []byte, mode bool) (out []byte, err error) {
 			//copy(cipherBlock,out_tmp)
 		}
 
-	} else { //解密
+	} else { // decryption
 		var i int = 0
 		for ; i < len(inData)/16; i++ {
 			if i == 0 {
-				c.Encrypt(K, IV)                                      //这里是加密，而不是调用解密方法Decrypt
-				plainBlock = xor(K[:BlockSize], inData[i*16:i*16+16]) //获取明文分组
+				c.Encrypt(K, IV)
+				plainBlock = xor(K[:BlockSize], inData[i*16:i*16+16]) // get plaintext block
 				copy(out[i*16:i*16+16], plainBlock)
 				continue
 			}
 			c.Encrypt(K, inData[(i-1)*16:(i-1)*16+16])
-			plainBlock = xor(K[:BlockSize], inData[i*16:i*16+16]) //获取明文分组
+			plainBlock = xor(K[:BlockSize], inData[i*16:i*16+16]) // get plaintext block
 			copy(out[i*16:i*16+16], plainBlock)
 
 		}
@@ -434,9 +459,10 @@ func Sm4CFB(key []byte, in []byte, mode bool) (out []byte, err error) {
 	return out, nil
 }
 
-// 输出反馈模式（Output feedback, OFB）
-// https://blog.csdn.net/chengqiuming/article/details/82390910
-// https://blog.csdn.net/sinat_23338865/article/details/72869841
+// Sm4OFB encrypts or decrypts a message using SM4 in OFB mode.
+// key is the symmetric key.
+// in is the input data.
+// mode is true for encryption, false for decryption.
 func Sm4OFB(key []byte, in []byte, mode bool) (out []byte, err error) {
 	if len(key) != BlockSize {
 		return nil, errors.New("SM4: invalid key size " + strconv.Itoa(len(key)))
