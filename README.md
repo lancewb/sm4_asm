@@ -19,7 +19,7 @@ This repository provides a Go implementation of the SM4 block cipher, a Chinese 
 To use this library in your Go project, you can use `go get`:
 
 ```bash
-go get github.com/your-username/sm4_asm
+go get github.com/tjfoc/sm4_asm
 ```
 
 ## Usage
@@ -33,7 +33,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/your-username/sm4_asm"
+	"github.com/tjfoc/sm4_asm"
 )
 
 func main() {
@@ -63,7 +63,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/your-username/sm4_asm"
+	"github.com/tjfoc/sm4_asm"
 )
 
 func main() {
@@ -97,7 +97,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/your-username/sm4_asm"
+	"github.com/tjfoc/sm4_asm"
 )
 
 func main() {
@@ -138,7 +138,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/your-username/sm4_asm"
+	"github.com/tjfoc/sm4_asm"
 )
 
 func main() {

@@ -1,4 +1,4 @@
-module sm4
+module github.com/tjfoc/sm4_asm
 
 go 1.24.3
 

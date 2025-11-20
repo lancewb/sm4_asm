@@ -21,10 +21,10 @@ func TestAsm(a, b int) int
 
 var supportsSMID = cpu.X86.HasAVX && cpu.X86.HasAVX2 && cpu.X86.HasAES
 
-// newCipher creates a new SM4 cipher. It will use the assembly implementation
+// NewCipher creates a new SM4 cipher. It will use the assembly implementation
 // if the CPU supports it, otherwise it will fall back to the generic Go implementation.
 // Note: The assembly implementation is incomplete.
-func newCipher(key []byte) (cipher.Block, error) {
+func NewCipher(key []byte) (cipher.Block, error) {
 	if len(key) != BlockSize {
 		return nil, errors.New("SM4: invalid key size " + strconv.Itoa(len(key)))
 	}
